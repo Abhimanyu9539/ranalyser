@@ -1,5 +1,6 @@
 """
-Prompt templates for the Resume Analyzer application.
+Updated prompt templates for structured outputs using Pydantic models.
+Removed JSON formatting instructions as they're handled by with_structured_output().
 """
 
 class ResumePrompts:
@@ -11,69 +12,56 @@ class ResumePrompts:
     Resume Text:
     {resume_text}
     
-    Please extract and format the information as JSON with the following structure:
-    {{
-        "personal_info": {{
-            "name": "Full name",
-            "email": "email@example.com",
-            "phone": "phone number",
-            "location": "city, state/country",
-            "linkedin": "linkedin profile URL",
-            "portfolio": "portfolio/website URL"
-        }},
-        "summary": "Professional summary or objective",
-        "experience": [
-            {{
-                "title": "Job Title",
-                "company": "Company Name",
-                "location": "City, State",
-                "start_date": "MM/YYYY",
-                "end_date": "MM/YYYY or Present",
-                "description": "Job description and achievements",
-                "key_achievements": ["Achievement 1", "Achievement 2"]
-            }}
-        ],
-        "education": [
-            {{
-                "degree": "Degree Type",
-                "field": "Field of Study",
-                "institution": "University/School Name",
-                "graduation_date": "MM/YYYY",
-                "gpa": "GPA if mentioned",
-                "honors": ["Honor 1", "Honor 2"] if mentioned
-            }}
-        ],
-        "skills": {{
-            "technical": ["Skill 1", "Skill 2"],
-            "programming_languages": ["Language 1", "Language 2"],
-            "frameworks_tools": ["Framework 1", "Tool 1"],
-            "soft_skills": ["Soft Skill 1", "Soft Skill 2"]
-        }},
-        "certifications": [
-            {{
-                "name": "Certification Name",
-                "issuer": "Issuing Organization",
-                "date": "MM/YYYY",
-                "expiry": "MM/YYYY or Never"
-            }}
-        ],
-        "projects": [
-            {{
-                "name": "Project Name",
-                "description": "Project description",
-                "technologies": ["Tech 1", "Tech 2"],
-                "url": "project URL if available"
-            }}
-        ]
-    }}
+    Extract the following information accurately:
     
-    Instructions:
+    PERSONAL INFORMATION:
+    - Full name, email, phone number
+    - Location (city, state/country)
+    - LinkedIn profile URL, portfolio/website URL, GitHub URL
+    
+    PROFESSIONAL SUMMARY:
+    - Professional summary or objective statement
+    
+    WORK EXPERIENCE:
+    - Job title, company name, location
+    - Start and end dates (format as MM/YYYY or "Present")
+    - Job description and key achievements
+    - Technologies or tools used
+    
+    EDUCATION:
+    - Degree type and field of study
+    - Institution name
+    - Graduation date (MM/YYYY format)
+    - GPA if mentioned, honors/awards if mentioned
+    
+    SKILLS:
+    - Technical skills (software, platforms, methodologies)
+    - Programming languages
+    - Frameworks and libraries
+    - Tools and software
+    - Databases
+    - Cloud platforms
+    - Soft skills (leadership, communication, etc.)
+    - Domain expertise (industry-specific knowledge)
+    
+    CERTIFICATIONS:
+    - Certification name and issuing organization
+    - Date obtained and expiry date
+    - Credential ID if available
+    
+    PROJECTS:
+    - Project name and description
+    - Technologies used
+    - Project URL if available
+    - Key features or achievements
+    
+    INSTRUCTIONS:
     1. Extract only information that is explicitly mentioned in the resume
     2. Use "Not specified" for missing optional fields
     3. Standardize date formats to MM/YYYY
-    4. Clean and normalize company names, job titles, and skills. Do not makeup the names.
+    4. Clean and normalize company names, job titles, and skills
     5. Group similar skills together logically
-    6. Ensure all JSON is valid and properly formatted
+    6. Do not make up or infer information that isn't clearly stated
     """
     
     EXTRACT_SKILLS = """
@@ -83,34 +71,25 @@ class ResumePrompts:
     {resume_text}
     
     Categorize skills into these specific categories:
-    - Technical Skills (software, platforms, methodologies)
-    - Programming Languages
-    - Frameworks & Libraries
-    - Tools & Software
-    - Databases
-    - Cloud Platforms
-    - Soft Skills (leadership, communication, etc.)
-    - Domain Expertise (industry-specific knowledge)
     
-    Return as JSON:
-    {{
-        "technical_skills": [],
-        "programming_languages": [],
-        "frameworks_libraries": [],
-        "tools_software": [],
-        "databases": [],
-        "cloud_platforms": [],
-        "soft_skills": [],
-        "domain_expertise": []
-    }}
+    TECHNICAL SKILLS: Software, platforms, methodologies, tools (non-programming)
+    PROGRAMMING LANGUAGES: All programming/scripting languages
+    FRAMEWORKS & LIBRARIES: Web frameworks, libraries, SDKs
+    TOOLS & SOFTWARE: Development tools, IDEs, design software, productivity tools
+    DATABASES: Database systems, query languages
+    CLOUD PLATFORMS: AWS, Azure, GCP, other cloud services
+    SOFT SKILLS: Leadership, communication, teamwork, problem-solving
+    DOMAIN EXPERTISE: Industry-specific knowledge, business domains
     
-    Rules:
-    1. Extract both explicitly mentioned and implied skills
-    2. Standardize skill names (e.g., "JS" → "JavaScript")
+    RULES:
+    1. Extract both explicitly mentioned and reasonably implied skills
+    2. Standardize skill names (e.g., "JS" → "JavaScript", "ML" → "Machine Learning")
     3. Don't repeat skills across categories
-    4. Include proficiency levels if mentioned. Do not include on your own.
-    5. Focus on relevant skills
+    4. Include proficiency levels only if explicitly mentioned
+    5. Focus on skills relevant to professional work
+    6. Group related skills appropriately
     """
+
 
 class JobMatchingPrompts:
     """Prompts for job matching and analysis."""
@@ -118,48 +97,51 @@ class JobMatchingPrompts:
     ANALYZE_JOB_MATCH = """
     You are an expert career consultant. Analyze how well this resume matches the job requirements.
     
-    Resume Skills and Experience:
+    Resume Information:
     {resume_data}
     
-    Job Requirements:
+    Job Information:
     {job_description}
     
-    Provide a detailed match analysis as JSON:
-    {{
-        "overall_match_percentage": 85,
-        "skill_matches": {{
-            "matched_skills": ["skill1", "skill2"],
-            "missing_critical_skills": ["skill3", "skill4"],
-            "nice_to_have_missing": ["skill5"]
-        }},
-        "experience_match": {{
-            "years_required": 5,
-            "years_candidate_has": 4,
-            "relevant_experience_match": 80,
-            "industry_match": true
-        }},
-        "education_match": {{
-            "required_degree": "Bachelor's",
-            "candidate_degree": "Bachelor's",
-            "field_relevance": 90
-        }},
-        "strengths": ["strength1", "strength2"],
-        "gaps": ["gap1", "gap2"],
-        "recommendations": ["recommendation1", "recommendation2"]
-    }}
+    Provide a comprehensive match analysis covering:
     
+    OVERALL MATCH:
+    - Calculate overall match percentage (0-100)
+    - Consider skills, experience, education, and other factors
+    
+    SKILL ANALYSIS:
+    - List matched skills between resume and job requirements
+    - Identify missing critical skills
+    - Note nice-to-have skills that are missing
+    
+    EXPERIENCE ANALYSIS:
+    - Compare years of experience required vs candidate's experience
+    - Assess relevance of candidate's experience to the role
+    - Evaluate industry/domain match
+    
+    EDUCATION ANALYSIS:
+    - Compare education requirements with candidate's background
+    - Assess field of study relevance
+    
+    STRENGTHS & GAPS:
+    - Highlight candidate's strongest selling points for this role
+    - Identify key gaps or weaknesses
+    - Provide specific recommendations for improvement
+    
+    MATCH SCORING:
     Calculate match percentage based on:
-    - Required skills match (40%)
-    - Experience level match (30%)
-    - Education requirements (15%)
-    - Industry/domain match (15%)
+    - Required skills match (40% weight)
+    - Experience level and relevance (30% weight)
+    - Education requirements (15% weight)
+    - Industry/domain alignment (15% weight)
     """
+
 
 class ATSPrompts:
     """Prompts for ATS scoring and optimization."""
     
     CALCULATE_ATS_SCORE = """
-    You are an ATS (Applicant Tracking System) expert. Analyze this resume for ATS compatibility.
+    You are an ATS (Applicant Tracking System) expert. Analyze this resume for ATS compatibility and scoring.
     
     Resume Content:
     {resume_text}
@@ -169,80 +151,52 @@ class ATSPrompts:
     
     Evaluate and score the resume on these ATS factors:
     
-    1. **Keyword Optimization (30%)**
-       - Presence of job-relevant keywords
-       - Keyword density and natural usage
-       - Industry-specific terminology
+    1. KEYWORD OPTIMIZATION (30% weight):
+       - Presence of job-relevant keywords from the job description
+       - Keyword density and natural usage (not keyword stuffing)
+       - Industry-specific terminology and acronyms
+       - Action verbs and skill-related terms
     
-    2. **Format and Structure (25%)**
-       - Clear section headers
-       - Consistent formatting
-       - Proper use of bullet points
-       - Standard resume sections present
+    2. FORMAT AND STRUCTURE (25% weight):
+       - Clear, standard section headers (Experience, Education, Skills, etc.)
+       - Consistent formatting throughout the document
+       - Proper use of bullet points and spacing
+       - Standard resume sections present and well-organized
     
-    3. **Content Quality (20%)**
-       - Quantified achievements
-       - Action verbs usage
-       - Relevant experience highlighted
-       - Skills clearly listed
+    3. CONTENT QUALITY (20% weight):
+       - Quantified achievements with specific numbers/percentages
+       - Strong action verbs to start bullet points
+       - Relevant experience clearly highlighted
+       - Skills section clearly listed and categorized
     
-    4. **Technical Compatibility (15%)**
+    4. TECHNICAL COMPATIBILITY (15% weight):
        - Text readability (assuming parsed from PDF/DOCX)
-       - Standard fonts and formatting
-       - No complex graphics or tables
+       - Use of standard fonts and formatting
+       - Minimal use of complex graphics, tables, or unusual layouts
+       - Proper text encoding without special characters
     
-    5. **Length and Conciseness (10%)**
-       - Appropriate length (1-2 pages)
-       - Concise descriptions
-       - No unnecessary information
+    5. LENGTH AND CONCISENESS (10% weight):
+       - Appropriate length for experience level (1-2 pages typically)
+       - Concise, impactful descriptions
+       - No unnecessary or irrelevant information
+       - Well-organized content hierarchy
     
-    Return detailed scoring as JSON:
-    {{
-        "overall_ats_score": 78,
-        "category_scores": {{
-            "keyword_optimization": {{
-                "score": 75,
-                "max_score": 30,
-                "feedback": "Good keyword usage but missing some key terms"
-            }},
-            "format_structure": {{
-                "score": 85,
-                "max_score": 25,
-                "feedback": "Well-structured with clear sections"
-            }},
-            "content_quality": {{
-                "score": 70,
-                "max_score": 20,
-                "feedback": "Needs more quantified achievements"
-            }},
-            "technical_compatibility": {{
-                "score": 90,
-                "max_score": 15,
-                "feedback": "Excellent technical format"
-            }},
-            "length_conciseness": {{
-                "score": 80,
-                "max_score": 10,
-                "feedback": "Good length and conciseness"
-            }}
-        }},
-        "missing_keywords": ["keyword1", "keyword2"],
-        "suggestions": [
-            "Add more quantified achievements",
-            "Include specific keywords: keyword1, keyword2",
-            "Improve action verb usage"
-        ],
-        "ats_friendly_rating": "Good"
-    }}
+    ANALYSIS REQUIREMENTS:
+    - Provide detailed scoring for each category
+    - Calculate overall ATS score (0-100)
+    - Identify missing keywords from the job description
+    - List specific suggestions for improvement
+    - Assign ATS-friendly rating: Excellent (90-100), Good (75-89), Fair (60-74), Poor (0-59)
     
-    Rating scale: Excellent (90-100), Good (75-89), Fair (60-74), Poor (0-59)
+    Focus on actionable feedback that will improve ATS performance.
     """
+
 
 class ImprovementPrompts:
     """Prompts for resume improvement suggestions."""
     
     GENERATE_IMPROVEMENTS = """
-    You are a professional resume coach with expertise in modern hiring practices.
+    You are a professional resume coach with expertise in modern hiring practices and ATS optimization.
     
     Current Resume Analysis:
     {resume_analysis}
@@ -253,59 +207,50 @@ class ImprovementPrompts:
     ATS Score Analysis:
     {ats_analysis}
     
-    Provide comprehensive improvement recommendations categorized as follows:
+    Provide comprehensive, actionable improvement recommendations organized by priority:
     
-    {{
-        "critical_improvements": [
-            {{
-                "category": "Missing Skills",
-                "issue": "Lack of required skill X",
-                "recommendation": "Add skill X to technical skills section",
-                "impact": "High - Required for role",
-                "implementation": "Take course Y or highlight existing experience"
-            }}
-        ],
-        "high_priority_improvements": [
-            {{
-                "category": "Content Enhancement",
-                "issue": "Lack of quantified achievements",
-                "recommendation": "Add metrics to 3-5 key achievements",
-                "impact": "High - Improves credibility",
-                "implementation": "Review past work and add specific numbers/percentages"
-            }}
-        ],
-        "medium_priority_improvements": [
-            {{
-                "category": "Keyword Optimization",
-                "issue": "Missing industry keywords",
-                "recommendation": "Incorporate keywords: X, Y, Z naturally",
-                "impact": "Medium - Improves ATS score",
-                "implementation": "Revise job descriptions to include these terms"
-            }}
-        ],
-        "nice_to_have_improvements": [
-            {{
-                "category": "Format Enhancement",
-                "issue": "Could improve visual appeal",
-                "recommendation": "Add consistent formatting to sections",
-                "impact": "Low - Aesthetic improvement",
-                "implementation": "Use consistent bullet points and spacing"
-            }}
-        ],
-        "skill_development_plan": {{
-            "immediate_actions": ["Action 1", "Action 2"],
-            "short_term_goals": ["Goal 1", "Goal 2"],
-            "long_term_development": ["Development area 1", "Development area 2"]
-        }},
-        "estimated_impact": {{
-            "ats_score_improvement": "+15 points",
-            "match_percentage_improvement": "+20%",
-            "timeline": "2-4 weeks for implementation"
-        }}
-    }}
+    CRITICAL IMPROVEMENTS (must address):
+    - Missing required skills or qualifications
+    - Major format issues affecting ATS parsing
+    - Significant content gaps or weaknesses
     
-    Focus on actionable, specific recommendations that will have measurable impact.
+    HIGH PRIORITY IMPROVEMENTS (should address):
+    - Content enhancement opportunities
+    - Keyword optimization for better ATS scoring
+    - Quantification of achievements
+    - Skills presentation improvements
+    
+    MEDIUM PRIORITY IMPROVEMENTS (nice to have):
+    - Format and visual appeal enhancements
+    - Additional keyword incorporation
+    - Section organization improvements
+    - Content flow optimization
+    
+    LOW PRIORITY IMPROVEMENTS (polish):
+    - Minor formatting consistency
+    - Optional section additions
+    - Style and presentation refinements
+    
+    For each improvement, provide:
+    - Clear description of the issue
+    - Specific recommendation with examples
+    - Expected impact on job matching/ATS score
+    - Implementation difficulty and time estimate
+    - Resources needed (if any)
+    
+    SKILL DEVELOPMENT PLAN:
+    - Immediate actions (can implement today)
+    - Short-term goals (1-3 months)
+    - Long-term development areas (3-12 months)
+    
+    ESTIMATED IMPACT:
+    - Potential ATS score improvement
+    - Expected increase in job match percentage
+    - Timeline for implementing changes
+    
+    Focus on specific, actionable recommendations that will have measurable impact on job search success.
     """
+
 
 class WorkflowPrompts:
     """Prompts for workflow coordination and decision making."""
@@ -317,17 +262,17 @@ class WorkflowPrompts:
     {current_state}
     
     Available Actions:
-    - parse_resume: Extract structured data from resume
+    - parse_resume: Extract structured data from resume text
     - find_jobs: Search for relevant job opportunities
-    - calculate_ats_score: Compute ATS compatibility score
-    - generate_improvements: Create improvement recommendations
-    - complete_analysis: Finish the workflow
+    - calculate_ats_score: Compute ATS compatibility score against job description
+    - generate_improvements: Create prioritized improvement recommendations
+    - complete_analysis: Finish the workflow and compile final report
     
-    Return the next action and reasoning:
-    {{
-        "next_action": "action_name",
-        "reasoning": "Why this action should be taken next",
-        "parameters": {{"param1": "value1"}},
-        "priority": "high|medium|low"
-    }}
+    Consider:
+    - What information is already available
+    - What information is still needed
+    - The logical sequence of operations
+    - Dependencies between different analysis steps
+    
+    Provide the next recommended action with clear reasoning.
     """
