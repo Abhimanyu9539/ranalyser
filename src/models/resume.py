@@ -2,9 +2,9 @@
 Pydantic Models for resume data structure
 """
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Optional
 from pydantic import BaseModel, Field, EmailStr, HttpUrl, validator
-from enum import enum
+from enum import Enum
 
 class SkillCategory(str, Enum):
     "Enumeration of skill categories"
@@ -59,7 +59,7 @@ class Education(BaseModel):
     degree : str
     issues : str
     date  : Optional[str] = None # MM/YYYY format
-    expiry : Optiional[str] = None #MM/YYYY format or "Never"
+    expiry : Optional[str] = None #MM/YYYY format or "Never"
     credentials_id : Optional[str] = None
     institution : Optional[str] = None
     url : Optional[HttpUrl] = None
