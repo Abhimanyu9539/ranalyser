@@ -2,48 +2,49 @@
 Pydantic Models for resume data structure
 """
 from datetime import datetime
-from typing import List, Optional, Dict, Any, Optional
-from pydantic import BaseModel, Field, EmailStr, HttpUrl, validator
+from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, Field, EmailStr, HttpUrl, field_validator
 from enum import Enum
 
 class SkillCategory(str, Enum):
-    "Enumeration of skill categories"
+    """Enumeration of skill categories"""
     TECHNICAL = "technical_skills"
-    PROGRAMMING = "programming language"
+    PROGRAMMING = "programming_languages"
     FRAMEWORKS = "frameworks_libraries"
     TOOLS = "tools_software"
-    DATABSES = "databases"
+    DATABASES = "databases"
     CLOUD = "cloud_platforms"
-    SOFT_SKILL = "soft_skills"
+    SOFT_SKILLS = "soft_skills"
     DOMAIN = "domain_expertise"
 
 class PersonalInfo(BaseModel):
-    "Personal Information from Resume"
-    name : str
-    email : Optional[EmailStr] = None
-    phone : Optional[str] = None
-    location : Optional[str] = None
-    linkedin : Optional[HttpUrl] = None
-    portfolio : Optional[HttpUrl] = None
+    """Personal Information from Resume"""
+    name: str
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    location: Optional[str] = None
+    linkedin: Optional[HttpUrl] = None
+    portfolio: Optional[HttpUrl] = None
     github: Optional[HttpUrl] = None
 
 class WorkExperience(BaseModel):
-    "Work Experience from Resume"
-    title : str
-    company : str
-    location : Optional[str] = None
-    start_date : str
-    end_date : str
-    description : str
-    key_achievements : List[str] = Field(default_factory=list)
+    """Work Experience from Resume"""
+    title: str
+    company: str
+    location: Optional[str] = None
+    start_date: str
+    end_date: str
+    description: str
+    key_achievements: List[str] = Field(default_factory=list)
     technologies_used: List[str] = Field(default_factory=list)
 
-    @validator('start_date', 'end_date')
+    @field_validator('start_date', 'end_date')
+    @classmethod
     def validate_date_format(cls, v):
         """Validate date formats (MM/YYYY or Present)."""
         if v.lower() == 'present':
             return v
-        try : 
+        try: 
             datetime.strptime(v, '%m/%Y')
             return v
         except ValueError:
@@ -55,14 +56,30 @@ class WorkExperience(BaseModel):
 
 
 class Education(BaseModel):
-    "Education Entry"
-    degree : str
-    issues : str
-    date  : Optional[str] = None # MM/YYYY format
-    expiry : Optional[str] = None #MM/YYYY format or "Never"
-    credentials_id : Optional[str] = None
-    institution : Optional[str] = None
-    url : Optional[HttpUrl] = None
+    """Education Entry"""
+    degree: str
+    field: str
+    institution: str
+    graduation_date: Optional[str] = None  # MM/YYYY format
+    gpa: Optional[str] = None
+    honors: Optional[str] = None
+
+    @field_validator('graduation_date')
+    @classmethod
+    def validate_graduation_date(cls, v):
+        """Validate graduation date format."""
+        if v is None:
+            return v
+        try:
+            datetime.strptime(v, '%m/%Y')
+            return v
+        except ValueError:
+            try:
+                datetime.strptime(v, '%Y')
+                return f"01/{v}"  # Convert YYYY to MM/YYYY
+            except ValueError:
+                raise ValueError('Graduation date must be in MM/YYYY format')
+
 
 class Certification(BaseModel):
     """Certification entry."""
@@ -106,7 +123,7 @@ class Skills(BaseModel):
             self.domain_expertise
         ]:
             all_skills.extend(skills_list)
-        return list(set(all_skills)) #Removes duplicates
+        return list(set(all_skills))  # Removes duplicates
 
     def get_technical_skills(self) -> List[str]:
         """Get only technical skills (excluding soft skills)"""
@@ -181,7 +198,7 @@ class Resume(BaseModel):
         
         degree_hierarchy = {
             'phd': 4, 'doctorate': 4, 'doctoral': 4,
-            'master': 3, 'mba': 3, 'ms': 3, 'ma': 3, 'og':3,
+            'master': 3, 'mba': 3, 'ms': 3, 'ma': 3, 'mg': 3,
             'bachelor': 2, 'bs': 2, 'ba': 2, 'btech': 2,
             'associate': 1, 'diploma': 1, 'certificate': 1
         }
@@ -223,9 +240,9 @@ class Resume(BaseModel):
 
 class ResumeAnalysisResult(BaseModel):
     """Result of Resume Analysis process"""
-    resume : Resume
+    resume: Resume
     parsing_confidence: float = Field(ge=0, le=1)
-    extacted_sections: List[str] = Field(default_factory = list)
+    extracted_sections: List[str] = Field(default_factory=list)
     parsing_issues: List[str] = Field(default_factory=list)
     suggestions: List[str] = Field(default_factory=list)
 

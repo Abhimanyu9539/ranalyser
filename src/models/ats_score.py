@@ -3,7 +3,7 @@ Pydantic models for ATS (Applicant Tracking System) scoring.
 """
 from datetime import datetime
 from typing import List, Optional, Dict, Any, Union
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from enum import Enum
 
 
@@ -148,7 +148,7 @@ class CategoryScore(BaseModel):
 class ImprovementSuggestion(BaseModel):
     """Individual improvement suggestion."""
     category: ScoreCategory
-    priority: str = Field(regex="^(critical|high|medium|low)$")
+    priority: str = Field(pattern="^(critical|high|medium|low)$")
     issue: str
     recommendation: str
     impact: str  # Expected impact description
@@ -156,7 +156,7 @@ class ImprovementSuggestion(BaseModel):
     estimated_score_improvement: float = Field(default=0, ge=0, le=100)
     
     # Implementation details
-    difficulty: str = Field(default="medium", regex="^(easy|medium|hard)$")
+    difficulty: str = Field(default="medium", pattern="^(easy|medium|hard)$")
     time_estimate: str = "1-2 hours"
     resources_needed: List[str] = Field(default_factory=list)
 
@@ -192,21 +192,23 @@ class ATSScore(BaseModel):
     model_version: Optional[str] = None
     processing_time: Optional[float] = None
     
-    @validator('overall_score')
-    def calculate_overall_score(cls, v, values):
+    @field_validator('overall_score')
+    @classmethod
+    def calculate_overall_score(cls, v, info):
         """Calculate overall score from category scores if not provided."""
-        if v == 0 and 'category_scores' in values:
-            category_scores = values['category_scores']
+        if v == 0 and 'category_scores' in info.data:
+            category_scores = info.data['category_scores']
             if category_scores:
                 total_weighted = sum(score.get_weighted_score() for score in category_scores)
                 return round(total_weighted, 1)
         return v
     
-    @validator('rating')
-    def set_rating_from_score(cls, v, values):
+    @field_validator('rating')
+    @classmethod 
+    def set_rating_from_score(cls, v, info):
         """Set rating based on overall score."""
-        if 'overall_score' in values:
-            score = values['overall_score']
+        if 'overall_score' in info.data:
+            score = info.data['overall_score']
             if score >= 90:
                 return ATSRating.EXCELLENT
             elif score >= 75:

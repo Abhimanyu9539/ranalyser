@@ -78,6 +78,7 @@ class LangGraphOpenAIService:
     def __init__(self):
         """Initialize OpenAI service with LangChain configuration."""
         self.api_key = settings.openai_api_key
+        print(self.api_key)
         self.model = settings.openai_model
         self.temperature = settings.openai_temperature
         
