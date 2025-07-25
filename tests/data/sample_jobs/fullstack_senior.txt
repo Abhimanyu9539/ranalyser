@@ -1,0 +1,44 @@
+Senior Full Stack Developer - Remote Opportunity
+
+Company: InnovateTech Solutions
+Location: Remote (US timezone)
+Salary: $120,000 - $160,000
+
+ABOUT THE ROLE
+We are seeking a Senior Full Stack Developer to join our growing engineering team. 
+You will be responsible for developing and maintaining our core SaaS platform that 
+serves thousands of customers worldwide.
+
+REQUIRED QUALIFICATIONS
+• 5+ years of professional software development experience
+• Expert-level proficiency in Python with Django or Flask framework
+• Strong frontend development skills with React and modern JavaScript/TypeScript
+• Experience with relational databases, preferably PostgreSQL
+• Proficiency with Git version control and collaborative development workflows
+• Experience with Docker containerization and CI/CD pipelines
+• Understanding of RESTful API design and development
+• Experience with Agile development methodologies
+
+PREFERRED QUALIFICATIONS  
+• AWS cloud platform experience (EC2, S3, RDS, Lambda)
+• Experience with microservices architecture and distributed systems
+• Knowledge of Redis for caching and session management
+• Familiarity with monitoring tools (Prometheus, Grafana, Sentry)
+• Previous experience in a leadership or mentoring role
+• Experience with automated testing frameworks (pytest, Jest)
+• Understanding of security best practices and OWASP guidelines
+
+RESPONSIBILITIES
+• Design and implement scalable web applications and APIs
+• Collaborate with product managers and designers to deliver user-focused features
+• Participate in architecture decisions and technical planning
+• Mentor junior developers and contribute to team knowledge sharing
+• Perform code reviews and maintain high code quality standards
+• Troubleshoot and resolve production issues in a timely manner
+
+TECHNICAL ENVIRONMENT
+Backend: Python 3.9+, Django 4.0, PostgreSQL, Redis
+Frontend: React 18, TypeScript, Redux Toolkit, Material-UI
+Infrastructure: AWS, Docker, Kubernetes, Terraform
+CI/CD: GitHub Actions, Docker Hub
+Monitoring: Prometheus, Grafana, Sentry

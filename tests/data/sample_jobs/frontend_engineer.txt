@@ -1,0 +1,38 @@
+Frontend Engineer
+Sarah Johnson | sarah.j@email.com | (555) 987-6543
+Portfolio: sarahjohnson.dev | LinkedIn: linkedin.com/in/sarahjohnson
+
+SUMMARY
+Creative Frontend Engineer with 5 years of experience building modern, 
+responsive web applications. Specializes in React ecosystem and has a 
+passion for user experience and performance optimization.
+
+EXPERIENCE
+Senior Frontend Engineer | DesignTech | New York, NY | 2021 - Present
+• Developed high-performance React applications using TypeScript and Next.js
+• Implemented responsive designs using CSS-in-JS and styled-components
+• Optimized application performance achieving 95+ Lighthouse scores
+• Mentored 3 junior developers and conducted technical interviews
+• Collaborated with UX/UI designers using Figma and Adobe Creative Suite
+
+Frontend Developer | MediaCorp | Boston, MA | 2019 - 2021
+• Built interactive web applications using React, Redux, and Material-UI
+• Developed mobile-responsive interfaces using CSS Grid and Flexbox
+• Integrated with REST APIs and implemented error handling strategies
+• Participated in agile development process and sprint planning
+
+Web Developer | FreelanceWeb | Remote | 2018 - 2019
+• Created custom WordPress themes and plugins using PHP and JavaScript
+• Built e-commerce websites using WooCommerce and Stripe integration
+• Optimized websites for SEO and page speed performance
+
+TECHNICAL SKILLS
+Frontend: React, Vue.js, Angular, TypeScript, JavaScript ES6+, HTML5, CSS3
+Styling: Sass, Less, styled-components, Tailwind CSS, Bootstrap, Material-UI
+Tools: Webpack, Babel, npm/yarn, Git, Figma, Adobe Creative Suite
+Testing: Jest, React Testing Library, Cypress, Storybook
+Performance: Lighthouse optimization, Web Vitals, Progressive Web Apps
+
+EDUCATION
+Bachelor of Arts in Graphic Design
+Rhode Island School of Design | 2014 - 2018

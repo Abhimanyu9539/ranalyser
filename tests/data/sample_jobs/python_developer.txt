@@ -1,0 +1,45 @@
+Python Developer - Data Engineering Focus
+
+Company: DataFlow Analytics
+Location: Seattle, WA (Hybrid)
+Salary: $90,000 - $130,000
+
+JOB DESCRIPTION
+Join our data engineering team to build robust data pipelines and analytics 
+solutions. You'll work with large datasets and cutting-edge technologies to 
+drive business insights.
+
+MUST-HAVE REQUIREMENTS
+• 3+ years of Python programming experience
+• Strong experience with data processing libraries (Pandas, NumPy, SciPy)
+• Knowledge of SQL and database technologies (PostgreSQL, MySQL)
+• Experience with ETL/ELT pipeline development
+• Familiarity with Apache Airflow or similar workflow orchestration tools
+• Understanding of data warehousing concepts and best practices
+• Experience with version control (Git) and collaborative development
+
+NICE-TO-HAVE SKILLS
+• Experience with cloud platforms (AWS, GCP, or Azure)
+• Knowledge of Apache Spark or other big data technologies  
+• Familiarity with machine learning libraries (scikit-learn, TensorFlow)
+• Experience with streaming data technologies (Kafka, Kinesis)
+• Knowledge of containerization (Docker) and orchestration (Kubernetes)
+• Experience with infrastructure as code (Terraform, CloudFormation)
+• Understanding of data visualization tools (Tableau, PowerBI, or similar)
+
+KEY RESPONSIBILITIES
+• Design and implement data pipelines for batch and real-time processing
+• Work with data scientists to productionize machine learning models
+• Optimize database queries and improve data processing performance
+• Maintain data quality and implement monitoring solutions
+• Collaborate with stakeholders to understand data requirements
+• Document data flows and maintain technical documentation
+
+TECH STACK
+Languages: Python 3.8+, SQL, Bash
+Data Processing: Pandas, NumPy, Apache Spark, Dask
+Databases: PostgreSQL, MongoDB, Snowflake
+Cloud: AWS (S3, EMR, Redshift, Lambda)
+Orchestration: Apache Airflow, Prefect
+Containerization: Docker, Kubernetes
+Monitoring: Prometheus, Grafana, DataDog

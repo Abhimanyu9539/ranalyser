@@ -1,0 +1,42 @@
+Senior Software Engineer
+Email: john.smith@email.com | Phone: (555) 123-4567
+LinkedIn: linkedin.com/in/johnsmith | GitHub: github.com/johnsmith
+
+PROFESSIONAL SUMMARY
+Senior Software Engineer with 8+ years of experience in full-stack development, 
+specializing in Python, Django, and React. Proven track record of leading teams 
+and delivering scalable web applications.
+
+WORK EXPERIENCE
+Senior Software Engineer | TechCorp Inc. | San Francisco, CA | 2020 - Present
+• Led development of microservices architecture serving 1M+ daily active users
+• Managed team of 12 developers across 3 product lines using Agile methodologies
+• Implemented CI/CD pipelines with Jenkins and Docker, reducing deployment time by 80%
+• Architected REST APIs using Django REST Framework and PostgreSQL
+• Built responsive frontend applications using React, TypeScript, and Redux
+
+Software Engineer | StartupXYZ | Remote | 2018 - 2020
+• Developed and maintained web applications using Python Django and JavaScript
+• Built real-time chat features using WebSocket technology and Redis
+• Optimized database queries improving application performance by 45%
+• Collaborated with product team to implement user-facing features
+
+Junior Developer | WebSolutions LLC | Austin, TX | 2016 - 2018
+• Built responsive websites using HTML5, CSS3, and JavaScript ES6
+• Worked with PHP and MySQL for backend development
+• Participated in code reviews and followed best practices
+
+TECHNICAL SKILLS
+Programming Languages: Python, JavaScript, TypeScript, Java, PHP, SQL
+Frameworks & Libraries: Django, React, Node.js, Express.js, Redux, Flask
+Databases: PostgreSQL, MongoDB, MySQL, Redis, Elasticsearch
+Cloud & DevOps: AWS (EC2, S3, RDS, Lambda), Docker, Kubernetes, Jenkins
+Tools: Git, Jira, VS Code, Postman, Figma
+
+EDUCATION
+Bachelor of Science in Computer Science
+University of California, Berkeley | 2012 - 2016
+
+CERTIFICATIONS
+AWS Certified Solutions Architect | 2021
+Certified ScrumMaster | 2020
