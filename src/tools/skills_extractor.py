@@ -8,6 +8,7 @@ import time
 from typing import Dict, List, Optional, Set, Union, Any
 from dataclasses import dataclass
 from enum import Enum
+import pprint
 
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
@@ -16,6 +17,8 @@ from pydantic import BaseModel, Field, validator
 from src.models.resume import Skills, SkillCategory
 from src.services.openai_service import langgraph_openai_service, OpenAIServiceError
 from config.settings import settings
+import dotenv
+dotenv.load_dotenv()
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -44,7 +47,7 @@ class ExtractedSkill(BaseModel):
     years_experience: Optional[float] = Field(None, description="Years of experience if mentioned")
     context: Optional[str] = Field(None, description="Context where skill was found")
     
-    @validator('name')
+    @field_validator('name')
     def standardize_skill_name(cls, v):
         """Standardize skill names (e.g., JS -> JavaScript)."""
         skill_mappings = {
@@ -171,10 +174,10 @@ class LLMSkillExtractor:
             
             # Post-process and validate skills
             processed_skills = await self._post_process_skills(extraction_result.skills, text)
-            
+
             # Create categorized skills structure
             categorized_skills = self._categorize_skills(processed_skills)
-            
+
             # Calculate metadata
             processing_time = time.time() - start_time
             metadata = {
@@ -562,3 +565,17 @@ async def compare_resume_job_skills(resume_text: str, job_text: str) -> Dict[str
 def get_skill_suggestions(skills_result: SkillExtractionResult) -> Dict[str, List[str]]:
     """Get skill suggestions based on current skills."""
     return llm_skill_extractor.get_skill_suggestions(skills_result)
+
+
+if __name__ == "__main__":
+    with open("/home/user/ranalyser/tests/data/sample_resumes/senior_developer.txt", "r") as file:
+        resume_text = file.read()
+    
+    with open("/home/user/ranalyser/tests/data/sample_jobs/frontend_engineer.txt", "r") as f:
+        job_text = f.read()
+
+    
+    #result = asyncio.run(extract_skills_from_resume(resume_text))
+    #print(result)
+    result = asyncio.run(compare_resume_job_skills(resume_text=resume_text, job_text=job_text))
+    print(result)
