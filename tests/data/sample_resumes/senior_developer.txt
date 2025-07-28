@@ -21,7 +21,7 @@ Software Engineer | StartupXYZ | Remote | 2018 - 2020
 • Optimized database queries improving application performance by 45%
 • Collaborated with product team to implement user-facing features
 
-Junior Developer | WebSolutions LLC | Austin, TX | 2016 - 2018
+Junior Developer | WebSolutions LLC | Austin, TX | 06/2016 - 10/2018
 • Built responsive websites using HTML5, CSS3, and JavaScript ES6
 • Worked with PHP and MySQL for backend development
 • Participated in code reviews and followed best practices
@@ -35,7 +35,7 @@ Tools: Git, Jira, VS Code, Postman, Figma
 
 EDUCATION
 Bachelor of Science in Computer Science
-University of California, Berkeley | 2012 - 2016
+University of California, Berkeley | 01/2012 - 05/2016
 
 CERTIFICATIONS
 AWS Certified Solutions Architect | 2021

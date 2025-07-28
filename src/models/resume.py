@@ -41,18 +41,32 @@ class WorkExperience(BaseModel):
     @field_validator('start_date', 'end_date')
     @classmethod
     def validate_date_format(cls, v):
-        """Validate date formats (MM/YYYY or Present)."""
-        if v.lower() == 'present':
+        """Accept dates as-is - both YYYY and MM/YYYY formats are valid."""
+        if not v:
             return v
-        try: 
+            
+        v = v.strip()
+        
+        # Handle "Present" and variations
+        if v.lower() in ['present', 'current', 'now', 'ongoing']:
+            return "Present"
+        
+        # Accept MM/YYYY format
+        try:
             datetime.strptime(v, '%m/%Y')
-            return v
+            return v  # Valid MM/YYYY - keep as is
         except ValueError:
-            try:
-                datetime.strptime(v, '%Y')
-                return f"01/{v}"  # Convert YYYY to MM/YYYY
-            except ValueError:
-                raise ValueError('Date must be in MM/YYYY format or "Present"')
+            pass
+        
+        # Accept YYYY format  
+        try:
+            datetime.strptime(v, '%Y')
+            return v  # Valid YYYY - keep as is (don't convert!)
+        except ValueError:
+            pass
+        
+        # If neither format works, return as-is (don't raise error)
+        return v
 
 
 class Education(BaseModel):
