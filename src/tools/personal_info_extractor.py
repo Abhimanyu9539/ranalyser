@@ -80,7 +80,7 @@ class LLMPersonalInfoExtractor:
         """Perform the actual LLM-based personal info extraction."""
         
         # Create structured LLM that returns PersonalInfo directly
-        structured_llm = self.openai_service.llm.with_structured_output(PersonalInfo)
+        structured_llm = self.openai_service.llm.with_structured_output(PersonalInfo, method="function_calling")
         
         # Create extraction prompt
         system_prompt = """You are an expert at extracting personal information from resumes. 
