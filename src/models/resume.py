@@ -102,7 +102,7 @@ class Education(BaseModel):
         
         # If neither format works, return as-is (don't raise error)
         return v
-        
+
 class Certification(BaseModel):
     """Certification entry."""
     name: str
@@ -220,7 +220,7 @@ class Resume(BaseModel):
         
         degree_hierarchy = {
             'phd': 4, 'doctorate': 4, 'doctoral': 4,
-            'master': 3, 'mba': 3, 'ms': 3, 'ma': 3, 'mg': 3,
+            'master': 3, 'mba': 3, 'ms': 3, 'ma': 3, 'mg': 3,'pg':3, 'post-graduate':3,
             'bachelor': 2, 'bs': 2, 'ba': 2, 'btech': 2,
             'associate': 1, 'diploma': 1, 'certificate': 1
         }
