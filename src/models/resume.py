@@ -82,19 +82,27 @@ class Education(BaseModel):
     @classmethod
     def validate_graduation_date(cls, v):
         """Validate graduation date format."""
-        if v is None:
+        if not v:
             return v
+            
+        v = v.strip()
+        # Accept MM/YYYY format
         try:
             datetime.strptime(v, '%m/%Y')
-            return v
+            return v  # Valid MM/YYYY - keep as is
         except ValueError:
-            try:
-                datetime.strptime(v, '%Y')
-                return f"01/{v}"  # Convert YYYY to MM/YYYY
-            except ValueError:
-                raise ValueError('Graduation date must be in MM/YYYY format')
-
-
+            pass
+        
+        # Accept YYYY format  
+        try:
+            datetime.strptime(v, '%Y')
+            return v  # Valid YYYY - keep as is (don't convert!)
+        except ValueError:
+            pass
+        
+        # If neither format works, return as-is (don't raise error)
+        return v
+        
 class Certification(BaseModel):
     """Certification entry."""
     name: str
