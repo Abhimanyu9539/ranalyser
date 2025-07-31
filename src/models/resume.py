@@ -110,7 +110,6 @@ class Certification(BaseModel):
     date: Optional[str] = None  # MM/YYYY format
     expiry: Optional[str] = None  # MM/YYYY format or "Never"
     credential_id: Optional[str] = None
-    url: Optional[HttpUrl] = None
 
 
 class Project(BaseModel): 
