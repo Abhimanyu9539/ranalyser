@@ -137,14 +137,15 @@ class LLMProjectsExtractor:
             
             # Post-process projects
             processed_projects = self._post_process_projects(projects_list)
+            print("############", processed_projects)
             
             # Calculate metadata
             processing_time = time.time() - start_time
             metadata = {
                 "processing_time": processing_time,
                 "total_projects": len(processed_projects),
-                "projects_with_urls": len([p for p in processed_projects if p.url]),
-                "unique_technologies": len(self._get_unique_technologies(processed_projects)),
+                "projects_with_urls": ([p for p in processed_projects if p.url]),
+                "unique_technologies": self._get_unique_technologies(processed_projects),
                 "web_projects": self._get_web_projects_count(processed_projects),
                 "mobile_projects": self._get_mobile_projects_count(processed_projects),
                 "model_used": settings.openai_model,
