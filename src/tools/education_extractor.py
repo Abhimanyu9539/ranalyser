@@ -1,18 +1,17 @@
 """
-LLM-based work experience extraction from resume text.
-Uses OpenAI/LangChain with function calling for reliable extraction of work history.
-Preserves original date formats exactly as written in the resume.
+LLM-based education extraction from resume text.
+Uses OpenAI/LangChain with function calling for reliable extraction of educational background.
+Preserves original date formats and handles various education entry types.
 """
 import logging
 import time
 import re
 from typing import Dict, List, Optional, Any
-from datetime import datetime
 
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from pydantic import BaseModel, Field
 
-from src.models.resume import WorkExperience
+from src.models.resume import Education
 from src.services.openai_service import langgraph_openai_service, OpenAIServiceError
 from config.settings import settings
 
@@ -21,214 +20,249 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class WorkExperienceExtractionError(Exception):
-    """Custom exception for work experience extraction errors."""
+class EducationExtractionError(Exception):
+    """Custom exception for education extraction errors."""
     pass
 
 
-class WorkExperienceExtractionResult(BaseModel):
-    """Work experience extraction result with metadata."""
-    experiences: List[WorkExperience] = Field(default_factory=list)
+class EducationExtractionResult(BaseModel):
+    """Education extraction result with metadata."""
+    education: List[Education] = Field(default_factory=list)
     extraction_metadata: Dict[str, Any] = Field(default_factory=dict)
     
-    def get_total_years_experience(self) -> float:
-        """Calculate total years of experience across all positions."""
-        total_years = 0.0
-        current_year = datetime.now().year
-        current_month = datetime.now().month
-
-        for exp in self.experiences:
-            try:
-                # Check if dates have month precision
-                start_has_month = '/' in exp.start_date
-                end_has_month = '/' in exp.end_date and exp.end_date.lower() != 'present'
-                is_present = exp.end_date.lower() == 'present'
-                
-                if start_has_month or end_has_month or is_present:
-                    # Use month-level calculation
-                    if start_has_month:
-                        start_parts = exp.start_date.split('/')
-                        start_month, start_year = int(start_parts[0]), int(start_parts[1])
-                    else:
-                        start_year = int(exp.start_date)
-                        start_month = 1
-                    
-                    if is_present:
-                        end_month, end_year = current_month, current_year
-                    elif end_has_month:
-                        end_parts = exp.end_date.split('/')
-                        end_month, end_year = int(end_parts[0]), int(end_parts[1])
-                    else:
-                        end_year = int(exp.end_date)
-                        end_month = 12
-                    
-                    months = ((end_year - start_year) * 12) + (end_month - start_month)
-                    total_years += max(0, months / 12)
-                else:
-                    # Both dates are year-only - simple year calculation
-                    start_year = int(exp.start_date)
-                    end_year = int(exp.end_date)
-                    years = end_year - start_year + 1
-                    total_years += max(0, years)
-                    
-            except (ValueError, IndexError):
-                continue
-        
-        return round(total_years, 1)
-    
-    def get_current_position(self) -> Optional[WorkExperience]:
-        """Get the current position (end_date = 'Present')."""
-        for exp in self.experiences:
-            if exp.end_date.lower() == 'present':
-                return exp
-        return None
-    
-    def get_companies_worked_at(self) -> List[str]:
-        """Get list of unique companies."""
-        return list(set(exp.company for exp in self.experiences))
-    
-    def get_most_recent_position(self) -> Optional[WorkExperience]:
-        """Get the most recent position."""
-        if not self.experiences:
+    def get_highest_degree(self) -> Optional[Education]:
+        """Get the highest level degree."""
+        if not self.education:
             return None
-        return self.experiences[0]  # Already sorted by date
+        
+        # Define degree hierarchy
+        degree_hierarchy = {
+            'phd': 6, 'doctorate': 6, 'doctoral': 6, 'ph.d': 6,
+            'master': 5, 'masters': 5, 'mba': 5, 'ms': 5, 'ma': 5, 'm.s': 5, 'm.a': 5,
+            'bachelor': 4, 'bachelors': 4, 'bs': 4, 'ba': 4, 'btech': 4, 'b.tech': 4, 'b.s': 4, 'b.a': 4,
+            'associate': 3, 'associates': 3, 'aa': 3, 'as': 3,
+            'diploma': 2, 'certificate': 1, 'certification': 1
+        }
+        
+        highest_level = 0
+        highest_education = None
+        
+        for edu in self.education:
+            degree_lower = edu.degree.lower()
+            for key, level in degree_hierarchy.items():
+                if key in degree_lower and level > highest_level:
+                    highest_level = level
+                    highest_education = edu
+                    break
+        
+        return highest_education or self.education[0]
+    
+    def get_recent_education(self) -> Optional[Education]:
+        """Get the most recent education entry."""
+        if not self.education:
+            return None
+        
+        # Sort by graduation date (most recent first)
+        sorted_education = sorted(
+            [edu for edu in self.education if edu.graduation_date],
+            key=lambda x: self._parse_date_for_sorting(x.graduation_date),
+            reverse=True
+        )
+        
+        return sorted_education[0] if sorted_education else self.education[0]
+    
+    def get_institutions_attended(self) -> List[str]:
+        """Get list of unique institutions attended."""
+        return list(set(edu.institution for edu in self.education))
+    
+    def has_degree_in_field(self, field: str) -> bool:
+        """Check if candidate has a degree in a specific field."""
+        field_lower = field.lower()
+        for edu in self.education:
+            if field_lower in edu.field.lower() or field_lower in edu.degree.lower():
+                return True
+        return False
+    
+    def _parse_date_for_sorting(self, date_str: str) -> int:
+        """Parse date for sorting purposes."""
+        try:
+            if '/' in date_str:
+                parts = date_str.split('/')
+                return int(parts[-1])  # Get year part
+            else:
+                return int(date_str)
+        except (ValueError, TypeError):
+            return 0
 
 
-class WorkExperienceLLMResult(BaseModel):
+class EducationLLMResult(BaseModel):
     """Wrapper for LLM extraction result."""
-    experiences: List[WorkExperience] = Field(default_factory=list)
+    education: List[Education] = Field(default_factory=list)
 
 
-class LLMWorkExperienceExtractor:
-    """LLM-based work experience extraction system."""
+class LLMEducationExtractor:
+    """LLM-based education extraction system."""
     
     def __init__(self):
-        """Initialize the work experience extractor."""
+        """Initialize the education extractor."""
         self.openai_service = langgraph_openai_service
-        logger.info("LLM Work Experience Extractor initialized")
+        logger.info("LLM Education Extractor initialized")
     
-    async def extract_work_experience_from_text(self, text: str) -> WorkExperienceExtractionResult:
+    async def extract_education_from_text(self, text: str) -> EducationExtractionResult:
         """
-        Extract work experience from resume text using LLM.
+        Extract education from resume text using LLM.
         
         Args:
-            text: The resume text to extract work experience from
+            text: The resume text to extract education from
         
         Returns:
-            WorkExperienceExtractionResult with extracted experience data and metadata
+            EducationExtractionResult with extracted education data and metadata
         """
         start_time = time.time()
         
         try:
-            logger.info("Starting LLM work experience extraction")
+            logger.info("Starting LLM education extraction")
             
             # Perform LLM extraction
-            experiences = await self._perform_llm_extraction(text)
+            education_list = await self._perform_llm_extraction(text)
             
-            # Post-process experiences
-            processed_experiences = self._post_process_experiences(experiences)
+            # Post-process education entries
+            processed_education = self._post_process_education(education_list)
             
             # Calculate metadata
             processing_time = time.time() - start_time
             metadata = {
                 "processing_time": processing_time,
-                "total_positions": len(processed_experiences),
-                "current_positions": len([exp for exp in processed_experiences if exp.end_date.lower() == 'present']),
-                "companies": list(set(exp.company for exp in processed_experiences)),
-                "total_years_experience": self._calculate_total_years(processed_experiences),
+                "total_education_entries": len(processed_education),
+                "institutions": list(set(edu.institution for edu in processed_education)),
+                "highest_degree": self._get_highest_degree_name(processed_education),
                 "model_used": settings.openai_model,
                 "extraction_method": "llm_function_calling"
             }
             
-            result = WorkExperienceExtractionResult(
-                experiences=processed_experiences,
+            result = EducationExtractionResult(
+                education=processed_education,
                 extraction_metadata=metadata
             )
             
-            logger.info(f"Work experience extraction completed. Found {len(processed_experiences)} positions in {processing_time:.2f}s")
+            logger.info(f"Education extraction completed. Found {len(processed_education)} entries in {processing_time:.2f}s")
             return result
             
         except Exception as e:
-            logger.error(f"Work experience extraction failed: {e}")
-            raise WorkExperienceExtractionError(f"Failed to extract work experience: {e}")
+            logger.error(f"Education extraction failed: {e}")
+            raise EducationExtractionError(f"Failed to extract education: {e}")
     
-    async def _perform_llm_extraction(self, text: str) -> List[WorkExperience]:
-        """Perform the actual LLM-based work experience extraction."""
+    async def _perform_llm_extraction(self, text: str) -> List[Education]:
+        """Perform the actual LLM-based education extraction."""
         
         # Use function calling for reliable extraction
         structured_llm = self.openai_service.llm.with_structured_output(
-            WorkExperienceLLMResult,
+            EducationLLMResult,
             method="function_calling"
         )
         
-        # Create specialized work experience extraction prompt
-        system_prompt = """You are an expert at extracting work experience from resumes.
-        Extract ALL employment history, including full-time, part-time, internships, and consulting work.
+        # Create specialized education extraction prompt
+        system_prompt = """You are an expert at extracting formal educational background from resumes.
+        Extract ONLY formal education entries - degrees and academic programs from educational institutions.
 
-        CRITICAL: Extract dates EXACTLY as they appear in the resume. Do not add months where none exist.
+        DO NOT EXTRACT:
+        - Professional certifications (AWS, Google, Microsoft, etc.)
+        - Industry certifications (PMP, CISSP, etc.)
+        - Professional licenses
+        - Training programs or workshops
+        - Corporate training or seminars
+
+        EXTRACT ONLY:
+        - Formal degrees (Bachelor's, Master's, PhD, Associate's)
+        - Academic diplomas from schools/universities
+        - Formal academic programs and courses from educational institutions
+        - Bootcamps and intensive academic programs (coding bootcamps, etc.)
 
         EXTRACTION GUIDELINES:
-        1. Extract each job/position as a separate work experience entry
-        2. Include ALL types of work: full-time, part-time, internships, co-ops, consulting, freelance
-        3. For missing information, use "Not specified" rather than making assumptions
-        4. Clean company names (remove Inc., LLC, Corp. suffixes if appropriate)
-        5. Standardize job titles for consistency
-        6. Extract specific achievements with quantifiable results when mentioned
-        7. Identify all technologies, tools, and skills used in each role
+        1. Extract each formal degree/education as a separate entry
+        2. Focus on degrees from universities, colleges, schools, and academic institutions
+        3. Extract graduation dates exactly as shown in the resume
+        4. For missing information, use "Not specified" rather than guessing
+        5. Standardize degree names and institution names appropriately
+        6. Extract GPA, honors, and awards when mentioned
+        7. Include relevant coursework or specializations when noted
 
-        WHAT TO EXTRACT FOR EACH POSITION:
-        - Job title/position name (clean format)
-        - Company name (standardized)
-        - Work location (city, state/country if mentioned)
-        - Start date (EXACT format from resume - do not modify)
-        - End date (EXACT format from resume - use "Present" for current jobs)
-        - Comprehensive job description combining all responsibilities
-        - Key achievements with specific metrics/results when available
-        - Technologies, tools, programming languages, and frameworks used
+        WHAT TO EXTRACT FOR EACH EDUCATION ENTRY:
+        - Degree type and level (Bachelor's, Master's, PhD, Certificate, etc.)
+        - Field of study/major (Computer Science, Business, etc.)
+        - Institution name (university, college, school)
+        - Graduation date (preserve original format)
+        - GPA (if mentioned)
+        - Honors/awards (Dean's List, Magna Cum Laude, etc.)
 
-        DATE EXTRACTION RULES - CRITICAL:
-        - If resume shows "2020 - Present" → start_date: "2020", end_date: "Present"
-        - If resume shows "2018 - 2020" → start_date: "2018", end_date: "2020"  
-        - If resume shows "Jan 2020 - Jun 2022" → start_date: "01/2020", end_date: "06/2022"
-        - If resume shows "01/2020 - 06/2022" → start_date: "01/2020", end_date: "06/2022"
-        - DO NOT add months to year-only dates
-        - DO NOT convert between date formats
-        - Preserve the exact format shown in the original text
+        DEGREE STANDARDIZATION:
+        - "BS" or "B.S." → "Bachelor of Science"
+        - "BA" or "B.A." → "Bachelor of Arts"
+        - "MS" or "M.S." → "Master of Science"
+        - "MA" or "M.A." → "Master of Arts"
+        - "MBA" → "Master of Business Administration"
+        - "PhD" or "Ph.D." → "Doctor of Philosophy"
+        - Keep original if unclear or non-standard
 
-        CONTENT EXTRACTION RULES:
-        - Combine job description bullets into a flowing, comprehensive summary
-        - Extract quantified achievements (percentages, dollar amounts, user counts, etc.)
-        - List ALL technologies mentioned in connection with each role
-        - Include team size, project scope, and leadership responsibilities
-        - Note any promotions or role changes within the same company as separate entries
-        - Focus on impact and results, not just responsibilities
+        INSTITUTION STANDARDIZATION:
+        - Use full, official names when recognizable
+        - "UC Berkeley" → "University of California, Berkeley"
+        - "MIT" → "Massachusetts Institute of Technology"
+        - Keep original name if uncertain
 
-        COMPANY NAME STANDARDIZATION:
-        - Remove unnecessary suffixes: "TechCorp Inc." → "TechCorp"
-        - Keep well-known abbreviations: "IBM Corp" → "IBM"
-        - Preserve unique company names exactly as written
-        - Clean up spacing and formatting inconsistencies"""
+        DATE EXTRACTION RULES:
+        - Extract graduation dates exactly as shown
+        - Common formats: "2020", "May 2020", "05/2020", "2016-2020"
+        - Use "Expected [date]" for future graduations
+        - Use "Not specified" if no date is mentioned
 
-        human_prompt = """Extract all work experience from this resume text:
+        FIELD OF STUDY RULES:
+        - Extract the specific major/field mentioned
+        - "Computer Science", "Electrical Engineering", "Business Administration"
+        - Include concentrations: "Computer Science with focus on AI"
+        - Use "Not specified" if field is unclear
+
+        GPA AND HONORS EXTRACTION:
+        - Extract GPA exactly as mentioned: "3.8", "3.85/4.0"
+        - Common honors: "Summa Cum Laude", "Magna Cum Laude", "Cum Laude"
+        - Other recognitions: "Dean's List", "Honor Roll", "Phi Beta Kappa"
+        - Academic awards and scholarships"""
+
+        human_prompt = """Extract ONLY formal educational background from this resume text:
 
         RESUME TEXT:
         {text}
 
-        Look for work experience in sections like:
-        - "Work Experience" / "Professional Experience" / "Employment History"
-        - "Experience" / "Career History" / "Professional Background"
-        - Any chronological listing of jobs and positions
+        Look for formal education in sections like:
+        - "Education" / "Educational Background" / "Academic Background"
+        - "Academic Qualifications" / "Degrees"
+        - Any section listing degrees from universities, colleges, or schools
 
-        For each position found, extract:
-        1. **Complete Job Information**: Title, company, location, dates
-        2. **Detailed Responsibilities**: What they did in the role
-        3. **Specific Achievements**: Quantified results and accomplishments  
-        4. **Technical Skills**: Technologies, tools, programming languages used
-        5. **Leadership/Scope**: Team size, project scale, management duties
+        IMPORTANT: Extract ONLY formal education from academic institutions:
+        ✅ INCLUDE:
+        - University degrees (Bachelor's, Master's, PhD)
+        - College diplomas and associate degrees
+        - Academic programs from schools and universities
+        - Formal academic courses and bootcamps
+        - Study abroad programs
 
-        CRITICAL: Extract dates exactly as written in the resume. Do not modify the format.
+        ❌ DO NOT INCLUDE:
+        - Professional certifications (AWS, Microsoft, Google, etc.)
+        - Industry certifications (PMP, CISSP, Salesforce, etc.)
+        - Professional licenses (CPA, PE, etc.)
+        - Corporate training programs
+        - Professional workshops or seminars
 
-        If any information is unclear or missing, extract what is available and use "Not specified" for missing fields.
+        For each FORMAL EDUCATION entry found, extract:
+        1. **Degree Information**: Type of degree and field of study
+        2. **Institution Details**: School/university name and location if mentioned
+        3. **Timeline**: Graduation date or time period
+        4. **Academic Performance**: GPA, honors, awards if mentioned
+        5. **Additional Details**: Relevant coursework, thesis topics, specializations
+
+        Extract dates exactly as written in the resume. Do not modify the format.
+
+        If any information is missing or unclear, use "Not specified" for that field.
         """
 
         prompt = ChatPromptTemplate.from_messages([
@@ -239,174 +273,232 @@ class LLMWorkExperienceExtractor:
         chain = prompt | structured_llm
         result = await chain.ainvoke({"text": text})
         
-        return result.experiences
+        return result.education
     
-    def _post_process_experiences(self, experiences: List[WorkExperience]) -> List[WorkExperience]:
-        """Post-process and validate extracted work experiences."""
+    def _post_process_education(self, education_list: List[Education]) -> List[Education]:
+        """Post-process and validate extracted education entries."""
         
         processed = []
         
-        for exp in experiences:
+        for edu in education_list:
             try:
-                # Clean and validate the experience entry
-                cleaned_exp = self._clean_experience_entry(exp)
+                # Clean and validate the education entry
+                cleaned_edu = self._clean_education_entry(edu)
                 
                 # Skip entries with missing critical information
-                if not cleaned_exp.title or not cleaned_exp.company:
-                    logger.warning(f"Skipping incomplete experience: {cleaned_exp.title} at {cleaned_exp.company}")
+                if not cleaned_edu.degree or not cleaned_edu.institution:
+                    logger.warning(f"Skipping incomplete education: {cleaned_edu.degree} at {cleaned_edu.institution}")
                     continue
                 
-                # Skip very short descriptions that might be parsing errors
-                if len(cleaned_exp.description.strip()) < 10:
-                    logger.warning(f"Skipping experience with very short description: {cleaned_exp.title}")
+                # Skip very generic or unclear entries
+                if len(cleaned_edu.degree.strip()) < 3 or len(cleaned_edu.institution.strip()) < 3:
+                    logger.warning(f"Skipping unclear education entry: {cleaned_edu.degree}")
                     continue
                 
-                processed.append(cleaned_exp)
+                processed.append(cleaned_edu)
                 
             except Exception as e:
-                logger.warning(f"Error processing experience entry: {e}")
+                logger.warning(f"Error processing education entry: {e}")
                 continue
         
-        # Sort by date (most recent first, current positions first)
+        # Sort by graduation date (most recent first)
         processed.sort(
-            key=lambda x: (
-                x.end_date.lower() != 'present',  # Present positions first
-                self._parse_date_for_sorting(x.end_date)
-            ),
+            key=lambda x: self._parse_graduation_date_for_sorting(x.graduation_date),
             reverse=True
         )
         
         return processed
     
-    def _clean_experience_entry(self, exp: WorkExperience) -> WorkExperience:
-        """Clean and standardize a single work experience entry."""
+    def _clean_education_entry(self, edu: Education) -> Education:
+        """Clean and standardize a single education entry."""
         
-        # Clean job title
-        title = exp.title.strip() if exp.title else ""
-        title = re.sub(r'\s+', ' ', title)  # Normalize whitespace
-        title = title.title() if title.islower() else title  # Fix case if all lowercase
+        # Clean degree name
+        degree = edu.degree.strip() if edu.degree else ""
+        degree = re.sub(r'\s+', ' ', degree)  # Normalize whitespace
+        degree = self._standardize_degree_name(degree)
         
-        # Clean company name
-        company = exp.company.strip() if exp.company else ""
-        company = re.sub(r'\s+', ' ', company)  # Normalize whitespace
-        # Remove common suffixes for cleaner display
-        company = re.sub(r'\s+(Inc\.?|LLC\.?|Corp\.?|Corporation|Ltd\.?|Limited)\s*$', '', company, flags=re.IGNORECASE)
+        # Clean field of study
+        field = edu.field.strip() if edu.field else ""
+        field = re.sub(r'\s+', ' ', field)  # Normalize whitespace
         
-        # Clean location
-        location = exp.location.strip() if exp.location else None
-        if location:
-            location = re.sub(r'\s+', ' ', location)
+        # Clean institution name
+        institution = edu.institution.strip() if edu.institution else ""
+        institution = re.sub(r'\s+', ' ', institution)  # Normalize whitespace
+        #institution = self._standardize_institution_name(institution)
         
-        # Clean dates (minimal processing - preserve format)
-        start_date = self._clean_date(exp.start_date)
-        end_date = self._clean_date(exp.end_date)
+        # Clean graduation date (preserve format)
+        graduation_date = self._clean_graduation_date(edu.graduation_date)
         
-        # Clean description
-        description = exp.description.strip() if exp.description else ""
-        description = re.sub(r'\s+', ' ', description)  # Normalize whitespace
-        description = re.sub(r'^[•\-\*]\s*', '', description)  # Remove leading bullets
+        # Clean GPA
+        gpa = edu.gpa.strip() if edu.gpa else None
+        if gpa and gpa.lower() in ['not specified', 'n/a', 'na', 'none']:
+            gpa = None
         
-        # Process achievements - remove duplicates and clean
-        achievements = []
-        if exp.key_achievements:
-            seen = set()
-            for achievement in exp.key_achievements:
-                clean_achievement = achievement.strip()
-                clean_achievement = re.sub(r'^[•\-\*]\s*', '', clean_achievement)  # Remove bullets
-                if clean_achievement and clean_achievement.lower() not in seen:
-                    achievements.append(clean_achievement)
-                    seen.add(clean_achievement.lower())
+        # Clean honors
+        honors = edu.honors.strip() if edu.honors else None
+        if honors and honors.lower() in ['not specified', 'n/a', 'na', 'none']:
+            honors = None
         
-        # Process technologies - remove duplicates and standardize
-        technologies = []
-        if exp.technologies_used:
-            seen = set()
-            for tech in exp.technologies_used:
-                clean_tech = tech.strip()
-                if clean_tech and clean_tech.lower() not in seen:
-                    technologies.append(clean_tech)
-                    seen.add(clean_tech.lower())
-        
-        return WorkExperience(
-            title=title,
-            company=company,
-            location=location,
-            start_date=start_date,
-            end_date=end_date,
-            description=description,
-            key_achievements=achievements,
-            technologies_used=technologies
+        return Education(
+            degree=degree,
+            field=field,
+            institution=institution,
+            graduation_date=graduation_date,
+            gpa=gpa,
+            honors=honors
         )
     
-    def _clean_date(self, date_str: str) -> str:
-        """Minimal date cleaning - preserve original format."""
+    def _standardize_degree_name(self, degree: str) -> str:
+        """Standardize degree names for consistency."""
+        if not degree:
+            return degree
+        
+        degree_lower = degree.lower()
+        
+        # Common degree standardizations
+        standardizations = {
+            'bs': 'Bachelor of Science',
+            'b.s': 'Bachelor of Science',
+            'b.s.': 'Bachelor of Science',
+            'bachelor of science': 'Bachelor of Science',
+            'ba': 'Bachelor of Arts',
+            'b.a': 'Bachelor of Arts',
+            'b.a.': 'Bachelor of Arts',
+            'bachelor of arts': 'Bachelor of Arts',
+            'btech': 'Bachelor of Technology',
+            'b.tech': 'Bachelor of Technology',
+            'be': 'Bachelor of Engineering',
+            'b.e': 'Bachelor of Engineering',
+            'ms': 'Master of Science',
+            'm.s': 'Master of Science',
+            'm.s.': 'Master of Science',
+            'master of science': 'Master of Science',
+            'ma': 'Master of Arts',
+            'm.a': 'Master of Arts',
+            'm.a.': 'Master of Arts',
+            'master of arts': 'Master of Arts',
+            'mba': 'Master of Business Administration',
+            'm.b.a': 'Master of Business Administration',
+            'mtech': 'Master of Technology',
+            'm.tech': 'Master of Technology',
+            'phd': 'Doctor of Philosophy',
+            'ph.d': 'Doctor of Philosophy',
+            'ph.d.': 'Doctor of Philosophy',
+            'doctorate': 'Doctor of Philosophy'
+        }
+        
+        for key, standard in standardizations.items():
+            if degree_lower == key or degree_lower == key + '.':
+                return standard
+        
+        # If no standardization found, return title case
+        return degree.title()
+    
+    def _standardize_institution_name(self, institution: str) -> str:
+        """Standardize institution names for consistency."""
+        if not institution:
+            return institution
+        
+        # Common institution standardizations
+        institution_lower = institution.lower()
+        
+        standardizations = {
+            'mit': 'Massachusetts Institute of Technology',
+            'stanford': 'Stanford University',
+            'harvard': 'Harvard University',
+            'uc berkeley': 'University of California, Berkeley',
+            'berkeley': 'University of California, Berkeley',
+            'caltech': 'California Institute of Technology',
+            'carnegie mellon': 'Carnegie Mellon University',
+            'cmu': 'Carnegie Mellon University',
+            'georgia tech': 'Georgia Institute of Technology',
+            'gt': 'Georgia Institute of Technology'
+        }
+        
+        for key, standard in standardizations.items():
+            if key in institution_lower:
+                return standard
+        
+        # Return original with proper title case
+        return institution.title()
+    
+    def _clean_graduation_date(self, date_str: Optional[str]) -> Optional[str]:
+        """Clean graduation date while preserving format."""
         if not date_str:
-            return "Not specified"
+            return None
         
         date_str = date_str.strip()
         
-        # Standardize "Present" variations
-        if date_str.lower() in ['present', 'current', 'now', 'ongoing', 'today']:
-            return "Present"
+        # Handle common variations
+        if date_str.lower() in ['not specified', 'n/a', 'na', 'none', 'tbd', 'pending']:
+            return None
         
-        # Return as-is for all other cases to preserve original format
+        # Handle "Expected" dates
+        if 'expected' in date_str.lower():
+            return date_str
+        
         return date_str
     
-    def _parse_date_for_sorting(self, date_str: str) -> tuple:
-        """Parse date for sorting purposes only."""
-        if date_str.lower() == 'present':
-            return (9999, 12)  # Sort present positions first
+    def _parse_graduation_date_for_sorting(self, date_str: Optional[str]) -> int:
+        """Parse graduation date for sorting purposes."""
+        if not date_str:
+            return 0
         
+        # Extract year from various formats
         try:
-            if '/' in date_str:
-                month, year = map(int, date_str.split('/'))
-                return (year, month)
-            else:
-                year = int(date_str)
-                return (year, 12)  # Assume December for year-only dates
+            # Look for 4-digit year
+            year_match = re.search(r'\b(19|20)\d{2}\b', date_str)
+            if year_match:
+                return int(year_match.group())
+            
+            # Try direct conversion
+            return int(date_str)
         except (ValueError, TypeError):
-            return (0, 0)  # Sort unparseable dates last
+            return 0
     
-    def _calculate_total_years(self, experiences: List[WorkExperience]) -> float:
-        """Calculate total years of experience for metadata."""
-        result = WorkExperienceExtractionResult(experiences=experiences)
-        return result.get_total_years_experience()
+    def _get_highest_degree_name(self, education_list: List[Education]) -> str:
+        """Get the name of the highest degree for metadata."""
+        if not education_list:
+            return "None"
+        
+        result = EducationExtractionResult(education=education_list)
+        highest = result.get_highest_degree()
+        return highest.degree if highest else "Not specified"
 
 
 # Global extractor instance
-llm_work_experience_extractor = LLMWorkExperienceExtractor()
+llm_education_extractor = LLMEducationExtractor()
 
 
 # Convenience functions
-async def extract_work_experience_from_resume(resume_text: str) -> WorkExperienceExtractionResult:
-    """Extract work experience from resume text."""
-    return await llm_work_experience_extractor.extract_work_experience_from_text(resume_text)
+async def extract_education_from_resume(resume_text: str) -> EducationExtractionResult:
+    """Extract education from resume text."""
+    return await llm_education_extractor.extract_education_from_text(resume_text)
 
 
-async def extract_work_experience_list(resume_text: str) -> List[WorkExperience]:
-    """Extract work experience and return just the list of WorkExperience objects."""
-    result = await extract_work_experience_from_resume(resume_text)
-    return result.experiences
+async def extract_education_list(resume_text: str) -> List[Education]:
+    """Extract education and return just the list of Education objects."""
+    result = await extract_education_from_resume(resume_text)
+    return result.education
 
 
 if __name__ == "__main__":
    
-    # Test with real file if available
-    import asyncio
     try:
         with open("/home/user/ranalyser/tests/data/sample_resumes/senior_developer.txt", "r") as file:
             resume_text = file.read()
-        
+        import asyncio
         print("=" * 60)
         print("Testing with real resume file...")
-        result = asyncio.run(extract_work_experience_from_resume(resume_text))
+        result = asyncio.run(extract_education_from_resume(resume_text))
         
         print("✅ Real file test successful!")
-        print(f"Found {len(result.experiences)} positions")
+        print(f"Found {len(result.education)} education entries")
         print(f"Processing time: {result.extraction_metadata['processing_time']:.2f}s")
         
-        for i, exp in enumerate(result.experiences, 1):
-            print(f"{i}. {exp.title} at {exp.company} ({exp.start_date} - {exp.end_date})")
+        for i, edu in enumerate(result.education, 1):
+            print(f"{i}. {edu.degree} in {edu.field}")
+            print(f"   {edu.institution} ({edu.graduation_date})")
             
     except FileNotFoundError:
         print("Sample resume file not found, skipping file test")
